@@ -9,5 +9,9 @@ RUN apt-get update \
 COPY pyproject.toml poetry.lock ./
 ENV POETRY_VIRTUALENVS_CREATE=false
 RUN poetry install --no-interaction --no-ansi --no-root
+RUN pip install gunicorn
 
 COPY . .
+EXPOSE 8000
+
+CMD ["uvicorn", "app.main:app", "--host"]
