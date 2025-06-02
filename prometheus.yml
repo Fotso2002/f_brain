@@ -2,25 +2,21 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
 
-rule_files:
-  # - "first_rules.yml"
-  # - "second_rules.yml"
-
 scrape_configs:
-  # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
   - job_name: 'prometheus'
     static_configs:
       - targets: ['localhost:9090']
-
-  # Django application metrics (if you have django-prometheus installed)
-  - job_name: 'django-app'
+  
+  - job_name: 'django'
     static_configs:
       - targets: ['web:8000']
     metrics_path: '/metrics'
-    scrape_interval: 30s
-
-  # RabbitMQ metrics
+  
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+  
   - job_name: 'rabbitmq'
     static_configs:
-      - targets: ['rabbitmq:15692']  # RabbitMQ Prometheus plugin port
-    scrape_interval: 30s
+      - targets: ['rabbitmq:15672']
+    metrics_path: '/metrics'

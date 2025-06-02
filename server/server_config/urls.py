@@ -33,7 +33,14 @@ def api_default_view(request):
     """
     return HttpResponse(html_content)
 
+# Ajoutez une vue simple pour la racine
+def home_view(request):
+    return HttpResponse("<h1>Bienvenue sur la racine de l'API Django !</h1><p>Accédez à <a href='/api/'>/api/</a> pour l'endpoint principal.</p>")
+
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', api_default_view, name='api-default'),
+    # Ajoutez ce pattern pour la racine
+    path('', home_view, name='home'),
 ]
