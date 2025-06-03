@@ -123,6 +123,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 STATIC_URL = 'static/'
 
+# Le chemin absolu vers le répertoire où les fichiers statiques seront collectés
+# Assurez-vous que ce chemin existe et est accessible par le conteneur web
+STATIC_ROOT = '/app/staticfiles/' # Ajoutez ou vérifiez cette ligne
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

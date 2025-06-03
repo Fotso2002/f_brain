@@ -8,6 +8,7 @@ volumes:
   pgdata:
   prometheus_data:
   grafana_data:
+  staticfiles_volume: # Nouveau volume pour les fichiers statiques
 
 services:
   nginx:
@@ -25,6 +26,9 @@ services:
       - rabbitmq
       - frontend
       - web
+    volumes:
+      # Monte le volume statique en lecture seule pour Nginx
+      - staticfiles_volume:/app/staticfiles:ro
 
   prometheus:
     image: prom/prometheus:latest
@@ -106,6 +110,7 @@ services:
       - "8000:8000"  # Port exposé pour accès direct à l'API Django et Docker Desktop
     command: >
       sh -c "
+        python manage.py collectstatic --noinput && # Ajoutez cette commande
         python manage.py migrate &&
         gunicorn server_config.wsgi:application --bind 0.0.0.0:8000
       "
@@ -115,6 +120,8 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+    volumes:
+      - staticfiles_volume:/app/staticfiles # Monte le volume statique
 
   celery:
     build:
