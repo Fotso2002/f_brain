@@ -32,13 +32,19 @@ services:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
     ports:
-      - "9090:9090"  # Port exposé pour accès direct et Docker Desktop
+      - "9090:9090"  # Ajoutez cette ligne pour exposer le port
     networks: [backend]
     healthcheck:
       test: ["CMD", "wget", "--spider", "http://localhost:9090"]
       interval: 10s
       timeout: 5s
       retries: 5
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.external-url=http://localhost/query/'
 
   grafana:
     image: grafana/grafana:latest
