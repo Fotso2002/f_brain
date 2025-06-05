@@ -6,6 +6,9 @@ on:
   push:
     branches:
       - main # Exécute le workflow à chaque push sur la branche 'main'
+  pull_request:
+    branches:
+      - develop # Exécute le workflow à chaque Pull Request vers la branche 'develop'
 
 # Jobs à exécuter dans ce workflow
 jobs:
@@ -14,24 +17,21 @@ jobs:
     name: Build Docker Images
 
     # Runner sur lequel le job s'exécutera
-    runs-on: ubuntu-latest # Utilise une machine virtuelle Ubuntu hébergée par GitHub
+    runs-on: ubuntu-latest
 
     # Étapes du job
     steps:
       # Étape 1: Cloner le code du repository
       - name: Checkout code
-        uses: actions/checkout@v4 # Utilise l'action officielle pour cloner le code
+        uses: actions/checkout@v4
 
-      # Étape 2: Configurer Docker Buildx (pour une meilleure performance de build)
+      # Étape 2: Configurer Docker Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       # Étape 3: Construire les images Docker
       - name: Build Docker images
         run: |
-          # Exécute la commande docker compose build
-          # --no-cache pour s'assurer que les dernières modifications sont prises en compte
-          # --progress=plain pour voir les détails du build
           docker compose build --no-cache --progress=plain
 
       # Étape 4: (Optionnel) Exécuter des tests (nous ajouterons des tests plus tard)
