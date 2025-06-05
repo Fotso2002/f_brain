@@ -1,0 +1,42 @@
+# Nom du workflow
+name: CI Pipeline
+
+# Événements qui déclenchent le workflow
+on:
+  push:
+    branches:
+      - main # Exécute le workflow à chaque push sur la branche 'main'
+
+# Jobs à exécuter dans ce workflow
+jobs:
+  build:
+    # Nom du job
+    name: Build Docker Images
+
+    # Runner sur lequel le job s'exécutera
+    runs-on: ubuntu-latest # Utilise une machine virtuelle Ubuntu hébergée par GitHub
+
+    # Étapes du job
+    steps:
+      # Étape 1: Cloner le code du repository
+      - name: Checkout code
+        uses: actions/checkout@v4 # Utilise l'action officielle pour cloner le code
+
+      # Étape 2: Configurer Docker Buildx (pour une meilleure performance de build)
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Étape 3: Construire les images Docker
+      - name: Build Docker images
+        run: |
+          # Exécute la commande docker compose build
+          # --no-cache pour s'assurer que les dernières modifications sont prises en compte
+          # --progress=plain pour voir les détails du build
+          docker compose build --no-cache --progress=plain
+
+      # Étape 4: (Optionnel) Exécuter des tests (nous ajouterons des tests plus tard)
+      # - name: Run tests
+      #   run: |
+      #     # Commandes pour exécuter vos tests (par exemple, tests Django, tests frontend)
+      #     # docker compose run --rm web python manage.py test
+      #     # docker compose run --rm frontend npm test # ou yarn test
