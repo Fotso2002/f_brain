@@ -26,6 +26,7 @@ services:
       - rabbitmq
       - frontend
       - web
+      - postgres-exporter # Ajout de la dépendance
     volumes:
       # Monte le volume statique en lecture seule pour Nginx
       - staticfiles_volume:/app/staticfiles:ro
@@ -107,12 +108,12 @@ services:
       dockerfile: Dockerfile
     env_file: .env
     ports:
-      - "8000:8000"  # Port exposé pour accès direct à l'API Django et Docker Desktop
+      - "8000:8000"
     command: >
       sh -c "
-        python manage.py collectstatic --noinput && # Ajoutez cette commande
+        python manage.py collectstatic --noinput &&
         python manage.py migrate &&
-        gunicorn server_config.wsgi:application --bind 0.0.0.0:8000
+        gunicorn server_config.wsgi:application --bind 0.0.0.0:8000 --timeout 120
       "
     networks: [backend]
     depends_on:
@@ -121,7 +122,7 @@ services:
       rabbitmq:
         condition: service_healthy
     volumes:
-      - staticfiles_volume:/app/staticfiles # Monte le volume statique
+      - staticfiles_volume:/app/staticfiles # Ce volume est correct
 
   celery:
     build:
@@ -149,7 +150,7 @@ services:
     image: prometheuscommunity/postgres-exporter
     env_file: .env
     ports:
-      - "9187:9187"  # Port exposé pour accès direct et Docker Desktop
+      - "9187:9187"
     environment:
       DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable"
     networks: [backend]
