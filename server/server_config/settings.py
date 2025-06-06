@@ -38,6 +38,11 @@ ALLOWED_HOSTS = [
 ]
 
 # Application definition
+# settings.py
+
+# ... (vos imports et configurations existantes)
+
+# Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -48,7 +53,12 @@ INSTALLED_APPS = [
     'django_prometheus',
     'django_celery_results',
     'django_celery_beat',
+    'translator', # Assurez-vous que cette ligne est présente et correcte
+    'rest_framework',
+    'rest_framework_simplejwt',
 ]
+
+# ... (le reste de vos settings)
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
