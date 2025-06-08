@@ -1,20 +1,17 @@
 # Nom du workflow
-name: CI Pipeline
+name: CD Pipeline
 
 # Événements qui déclenchent le workflow
 on:
   push:
     branches:
-      - main # Exécute le workflow à chaque push sur la branche 'main'
-  pull_request:
-    branches:
-      - develop # Exécute le workflow à chaque Pull Request vers la branche 'develop'
+      - develop # Déclenche le workflow à chaque push sur la branche 'develop' (correspond à un merge dans develop)
 
 # Jobs à exécuter dans ce workflow
 jobs:
-  build_and_test: # Renommons le job pour refléter qu'il inclut aussi des tests
+  deploy:
     # Nom du job
-    name: Build and Test Services
+    name: Deploy Application
 
     # Runner sur lequel le job s'exécutera
     runs-on: ubuntu-latest
@@ -24,56 +21,22 @@ jobs:
       # Étape 1: Cloner le code du repository
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: develop # Cloner la branche develop car le déclencheur est sur develop
 
-      # Étape 2: Configurer Docker Buildx
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      # Étape 2: Configurer SSH pour se connecter à la machine cible
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      # Étape 3: Construire les images Docker
-      - name: Build Docker images
+      # Étape 3: Ajouter l'hôte cible aux hôtes connus
+      - name: Add target to known hosts
         run: |
-          # Exécute la commande docker compose build pour tous les services
-          # --no-cache pour s'assurer que les dernières modifications sont prises en compte
-          # --progress=plain pour voir les détails du build
-          docker compose build --no-cache --progress=plain
+          mkdir -p ~/.ssh
+          ssh-keyscan ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
-      # Étape 4: Démarrer les services (pour les tests d'intégration et de santé)
-      - name: Start services
+      # Étape 4: Déployer l'application via SSH
+      - name: Deploy with Docker Compose
         run: |
-          # Démarre tous les services en mode détaché
-          # --wait pour attendre que les services soient sains (basé sur les healthchecks)
-          docker compose up -d --wait
-
-      # Étape 5: Vérifier l'état des services (optionnel)
-      - name: Check service status
-        run: |
-          # Affiche l'état des conteneurs
-          docker compose ps
-
-      # Étape 6: Exécuter des tests pour chaque service (structure)
-      # Nous ajouterons les commandes de test spécifiques plus tard
-
-      # Test du backend (Django)
-      - name: Run Django tests
-        run: |
-          # Exemple: Exécute les tests Django
-          # docker compose exec web python manage.py test
-
-      # Test du frontend (React)
-      - name: Run Frontend tests
-        run: |
-          # Exemple: Exécute les tests frontend (par exemple, avec Jest ou Vitest)
-          # docker compose exec frontend npm test # ou yarn test
-
-      # Test d'intégration (optionnel)
-      - name: Run Integration tests
-        run: |
-          # Exemple: Exécute des tests qui vérifient l'interaction entre les services
-          # Par exemple, un script Python qui appelle les endpoints API via Nginx
-
-      # Étape 7: Arrêter les services (important pour nettoyer le runner)
-      - name: Stop services
-        if: always() # S'exécute même si les étapes précédentes échouent
-        run: |
-          # Arrête et supprime les conteneurs et réseaux
-          docker compose down
+          # Connecte-toi à la machine cible via SSH et exécute les

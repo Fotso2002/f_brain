@@ -5,13 +5,13 @@ name: CD Pipeline
 on:
   push:
     branches:
-      - main # Déclenche le workflow à chaque push sur la branche 'main'
+      - develop # Déclenche le workflow à chaque push sur la branche 'develop' (correspond à un merge dans develop)
 
 # Jobs à exécuter dans ce workflow
 jobs:
   deploy:
     # Nom du job
-    name: Deploy to Local Machine
+    name: Deploy Application
 
     # Runner sur lequel le job s'exécutera
     runs-on: ubuntu-latest
@@ -21,15 +21,17 @@ jobs:
       # Étape 1: Cloner le code du repository
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: develop # Cloner la branche develop car le déclencheur est sur develop
 
-      # Étape 2: Configurer SSH pour se connecter à la machine locale
+      # Étape 2: Configurer SSH pour se connecter à la machine cible
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      # Étape 3: Ajouter l'hôte local aux hôtes connus
-      - name: Add local machine to known hosts
+      # Étape 3: Ajouter l'hôte cible aux hôtes connus
+      - name: Add target to known hosts
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
@@ -37,32 +39,4 @@ jobs:
       # Étape 4: Déployer l'application via SSH
       - name: Deploy with Docker Compose
         run: |
-          # Connecte-toi à ta machine locale via SSH et exécute les commandes Docker Compose
-          # Utilise le chemin MINGW64 pour le répertoire de déploiement
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-            # Navigue vers le répertoire du projet sur ta machine locale
-            # Remplace /c/Users/franc/f_brain_deploy par le chemin réel de ton répertoire de déploiement
-            cd /c/Users/franc/f_brain_deploy
-
-            # Tire les dernières modifications depuis GitHub
-            git checkout main # Assure-toi d'être sur la branche main
-            git pull origin main
-
-            # Arrête les conteneurs existants
-            docker compose down -v # Arrête et supprime les conteneurs et volumes
-
-            # Reconstruis les images et démarre les conteneurs
-            # --force-recreate pour s'assurer que les nouveaux conteneurs sont créés
-            docker compose up --build --force-recreate -d
-
-            # Applique les migrations de base de données (si nécessaire)
-            docker compose exec web python manage.py migrate --noinput
-
-            # Collecte les fichiers statiques (si nécessaire)
-            docker compose exec web python manage.py collectstatic --noinput
-
-            # Redémarre le service web pour s'assurer que les changements sont pris en compte
-            docker compose restart web
-
-          EOF
-        # L'EOF marque la fin des commandes à exécuter via SSH
+          # Connecte-toi à la machine cible via SSH et exécute les
