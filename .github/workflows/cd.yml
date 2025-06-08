@@ -5,7 +5,7 @@ name: CD Pipeline
 on:
   push:
     branches:
-      - develop # Déclenche le workflow à chaque push sur la branche 'develop'
+      - develop # Déclenche le workflow à chaque push sur la branche 'develop' (correspond à un merge dans develop)
 
 # Jobs à exécuter dans ce workflow
 jobs:
@@ -21,6 +21,8 @@ jobs:
       # Étape 1: Cloner le code du repository
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: develop # Cloner la branche develop car le déclencheur est sur develop
 
       # Étape 2: Configurer SSH pour se connecter à la machine cible
       - name: Setup SSH
@@ -37,57 +39,4 @@ jobs:
       # Étape 4: Déployer l'application via SSH
       - name: Deploy with Docker Compose
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-            # Navigue vers le répertoire du projet sur la machine cible
-            # Remplace /chemin/vers/ton/repertoire/deploiement par le chemin réel
-            cd /c/Users/franc/f_brain_deploy # Exemple de chemin MINGW64
-
-            # Tire les dernières modifications depuis GitHub (branche develop)
-            git checkout develop # Assure-toi d'être sur la branche develop
-            git pull origin develop
-
-            # Arrête les conteneurs existants
-            docker compose down -v
-
-            # Reconstruis les images et démarre les conteneurs
-            docker compose up --build --force-recreate -d
-
-            # Applique les migrations de base de données (si nécessaire)
-            docker compose exec web python manage.py migrate --noinput
-
-            # Collecte les fichiers statiques (si nécessaire)
-            docker compose exec web python manage.py collectstatic --noinput
-
-            # Redémarre le service web (si nécessaire)
-            # docker compose restart web
-
-          EOF
-    ```
-
-**Explication de l'adaptation :**
-
-*   **CI sur PR vers `develop` :** Le CI se déclenche lorsque vous proposez d'intégrer du code dans `develop` via une Pull Request. Cela vérifie la qualité du code avant qu'il n'atteigne la branche de développement principale.
-*   **CD sur push vers `develop` :** Le CD se déclenche lorsque du code est fusionné ou poussé directement sur la branche `develop`. Cela signifie que chaque modification intégrée dans `develop` est automatiquement déployée sur votre machine cible.
-
-**Processus de développement avec ces workflows :**
-
-1.  Développement sur une branche de fonctionnalité (ex: `feat/nouvelle-fonctionnalite`).
-2.  Push sur la branche de fonctionnalité.
-3.  Création d'une Pull Request de `feat/nouvelle-fonctionnalite` vers `develop`.
-4.  Le **CI** s'exécute sur la PR.
-5.  Si le CI réussit et que la revue de code est positive, fusionnez la PR dans `develop`.
-6.  Le push résultant sur `develop` déclenche le **CD**.
-7.  Le **CD** déploie automatiquement la nouvelle version de l'application sur votre machine cible.
-
-Cette configuration correspond mieux à un flux où `develop` est la branche qui est automatiquement déployée pour les tests ou la pré-production. Si vous voulez que `main` soit la branche déployée, vous devrez inverser les déclencheurs des workflows CI et CD.
-
-**Pour appliquer ces modifications :**
-
-1.  Remplacez le contenu de votre fichier `.github/workflows/ci.yml` par le premier code YAML fourni.
-2.  Remplacez le contenu de votre fichier `.github/workflows/cd.yml` par le deuxième code YAML fourni.
-3.  Sauvegardez les fichiers.
-4.  Commitez et poussez ces modifications sur votre branche de fonctionnalité actuelle.
-5.  Mettez à jour votre Pull Request vers `develop`. Le workflow CI s'exécutera.
-6.  Une fois que le CI réussit, fusionnez la PR dans `develop`. Le workflow CD se déclenchera alors.
-
-Cette configuration vous donne un pipeline CI/CD fonctionnel où le CI vérifie le code avant la fusion dans `develop`, et le CD déploie automatiquement les modifications de `develop`.
+          # Connecte-toi à la machine cible via SSH et exécute les
