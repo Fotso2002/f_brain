@@ -12,9 +12,9 @@ on:
 
 # Jobs à exécuter dans ce workflow
 jobs:
-  build:
+  build_and_test: # Renommons le job pour refléter qu'il inclut aussi des tests
     # Nom du job
-    name: Build Docker Images
+    name: Build and Test Services
 
     # Runner sur lequel le job s'exécutera
     runs-on: ubuntu-latest
@@ -32,11 +32,48 @@ jobs:
       # Étape 3: Construire les images Docker
       - name: Build Docker images
         run: |
+          # Exécute la commande docker compose build pour tous les services
+          # --no-cache pour s'assurer que les dernières modifications sont prises en compte
+          # --progress=plain pour voir les détails du build
           docker compose build --no-cache --progress=plain
 
-      # Étape 4: (Optionnel) Exécuter des tests (nous ajouterons des tests plus tard)
-      # - name: Run tests
-      #   run: |
-      #     # Commandes pour exécuter vos tests (par exemple, tests Django, tests frontend)
-      #     # docker compose run --rm web python manage.py test
-      #     # docker compose run --rm frontend npm test # ou yarn test
+      # Étape 4: Démarrer les services (pour les tests d'intégration et de santé)
+      - name: Start services
+        run: |
+          # Démarre tous les services en mode détaché
+          # --wait pour attendre que les services soient sains (basé sur les healthchecks)
+          docker compose up -d --wait
+
+      # Étape 5: Vérifier l'état des services (optionnel)
+      - name: Check service status
+        run: |
+          # Affiche l'état des conteneurs
+          docker compose ps
+
+      # Étape 6: Exécuter des tests pour chaque service (structure)
+      # Nous ajouterons les commandes de test spécifiques plus tard
+
+      # Test du backend (Django)
+      - name: Run Django tests
+        run: |
+          # Exemple: Exécute les tests Django
+          # docker compose exec web python manage.py test
+
+      # Test du frontend (React)
+      - name: Run Frontend tests
+        run: |
+          # Exemple: Exécute les tests frontend (par exemple, avec Jest ou Vitest)
+          # docker compose exec frontend npm test # ou yarn test
+
+      # Test d'intégration (optionnel)
+      - name: Run Integration tests
+        run: |
+          # Exemple: Exécute des tests qui vérifient l'interaction entre les services
+          # Par exemple, un script Python qui appelle les endpoints API via Nginx
+
+      # Étape 7: Arrêter les services (important pour nettoyer le runner)
+      - name: Stop services
+        if: always() # S'exécute même si les étapes précédentes échouent
+        run: |
+          # Arrête et supprime les conteneurs et réseaux
+          docker compose down
