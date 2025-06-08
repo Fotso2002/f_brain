@@ -1,11 +1,10 @@
 // client/src/pages/TranslatePage.jsx
 
-import React, { useState, useEffect } from 'react';
-import { translateText } from '../services/api';
+import React, { useState, useEffect, useRef } from 'react'; // Importez useRef
+import { translateText, getTranslationDetail } from '../services/api'; // Importez getTranslationDetail
 import { useNavigate } from 'react-router-dom';
-import './TranslatePage.css'; // Importez le fichier CSS
+import './TranslatePage.css';
 
-// Liste simple de langues (vous pouvez l'étendre)
 const languages = [
   { code: 'en', name: 'English' },
   { code: 'fr', name: 'French' },
@@ -16,21 +15,71 @@ const languages = [
 
 function TranslatePage() {
   const [originalText, setOriginalText] = useState('');
-  const [sourceLanguage, setSourceLanguage] = useState('en'); // Langue source par défaut
-  const [targetLanguage, setTargetLanguage] = useState('fr'); // Langue cible par défaut
+  const [sourceLanguage, setSourceLanguage] = useState('en');
+  const [targetLanguage, setTargetLanguage] = useState('fr');
   const [translatedText, setTranslatedText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [currentTranslationId, setCurrentTranslationId] = useState(null); // Nouvel état pour l'ID de la traduction en cours
   const navigate = useNavigate();
+
+  const pollingIntervalRef = useRef(null); // Pour stocker l'ID de l'intervalle de polling
 
   // Vérifie si l'utilisateur est authentifié au chargement de la page
   useEffect(() => {
     const accessToken = localStorage.getItem('accessToken');
     if (!accessToken) {
-      // Si pas de token, redirige vers la page de connexion
       navigate('/login');
     }
-  }, [navigate]); // Dépendance sur navigate pour éviter les avertissements
+
+    // Nettoie l'intervalle de polling lors du démontage du composant
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, [navigate]);
+
+  // Logique de polling pour vérifier le résultat de la traduction
+  useEffect(() => {
+    if (currentTranslationId !== null) {
+      const accessToken = localStorage.getItem('accessToken');
+      if (!accessToken) {
+        setError('You are not logged in.');
+        navigate('/login');
+        return;
+      }
+
+      // Démarre le polling
+      pollingIntervalRef.current = setInterval(async () => {
+        try {
+          const response = await getTranslationDetail(currentTranslationId, accessToken);
+          const translation = response.data;
+
+          if (translation.translated_text) {
+            // Si le texte traduit est disponible
+            setTranslatedText(translation.translated_text);
+            setIsLoading(false);
+            setCurrentTranslationId(null); // Arrête le polling
+            if (pollingIntervalRef.current) {
+              clearInterval(pollingIntervalRef.current);
+            }
+          } else {
+            // Le texte traduit n'est pas encore disponible, continue le polling
+            setTranslatedText('Translation in progress...');
+          }
+        } catch (err) {
+          setError('Failed to fetch translation result.');
+          setIsLoading(false);
+          setCurrentTranslationId(null);
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+          }
+          console.error('Polling error:', err.response ? err.response.data : err.message);
+        }
+      }, 3000); // Interroge toutes les 3 secondes (ajustez si nécessaire)
+    }
+  }, [currentTranslationId, navigate]); // Dépendance sur currentTranslationId et navigate
 
   const handleTranslate = async (e) => {
     e.preventDefault();
@@ -38,13 +87,14 @@ function TranslatePage() {
     const accessToken = localStorage.getItem('accessToken');
     if (!accessToken) {
       setError('You are not logged in.');
-      navigate('/login'); // Redirige si le token a disparu
+      navigate('/login');
       return;
     }
 
     setIsLoading(true);
     setError('');
-    setTranslatedText(''); // Réinitialise le texte traduit
+    setTranslatedText('Translation in progress...'); // Affiche le message immédiatement
+    setCurrentTranslationId(null); // Réinitialise l'ID de la traduction précédente
 
     try {
       const response = await translateText(
@@ -55,24 +105,18 @@ function TranslatePage() {
         },
         accessToken
       );
-      // L'API renvoie 202 Accepted et les détails de la traduction initiale
-      // Le texte traduit sera mis à jour de manière asynchrone par Celery
-      // Pour l'instant, nous affichons un message indiquant que la traduction est en cours
-      setTranslatedText('Translation in progress...');
-      console.log('Translation request accepted:', response.data);
-
-      // Dans une application réelle, vous pourriez interroger l'historique
-      // ou utiliser WebSockets pour obtenir le résultat de la traduction asynchrone.
-      // Pour ce guide, l'utilisateur devra aller sur la page d'historique pour voir le résultat final.
+      // L'API renvoie 202 Accepted et les détails de la traduction initiale (avec l'ID)
+      const newTranslationId = response.data.id;
+      setCurrentTranslationId(newTranslationId); // Stocke l'ID pour le polling
 
     } catch (err) {
       setError('Translation failed. Please try again.');
+      setIsLoading(false);
+      setCurrentTranslationId(null);
       console.error('Translation error:', err.response ? err.response.data : err.message);
       if (err.response && err.response.data) {
         setError(JSON.stringify(err.response.data));
       }
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -124,7 +168,7 @@ function TranslatePage() {
           </div>
         </div>
 
-        <button type="submit" disabled={isLoading}>
+        <button type="submit" disabled={isLoading || originalText.trim() === ''}> {/* Désactive si texte vide */}
           {isLoading ? 'Translating...' : 'Translate'}
         </button>
       </form>

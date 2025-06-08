@@ -1,0 +1,42 @@
+# Nom du workflow
+name: CD Pipeline
+
+# Événements qui déclenchent le workflow
+on:
+  push:
+    branches:
+      - develop # Déclenche le workflow à chaque push sur la branche 'develop' (correspond à un merge dans develop)
+
+# Jobs à exécuter dans ce workflow
+jobs:
+  deploy:
+    # Nom du job
+    name: Deploy Application
+
+    # Runner sur lequel le job s'exécutera
+    runs-on: ubuntu-latest
+
+    # Étapes du job
+    steps:
+      # Étape 1: Cloner le code du repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: develop # Cloner la branche develop car le déclencheur est sur develop
+
+      # Étape 2: Configurer SSH pour se connecter à la machine cible
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      # Étape 3: Ajouter l'hôte cible aux hôtes connus
+      - name: Add target to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      # Étape 4: Déployer l'application via SSH
+      - name: Deploy with Docker Compose
+        run: |
+          # Connecte-toi à la machine cible via SSH et exécute les
